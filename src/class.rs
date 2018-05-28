@@ -1,15 +1,20 @@
+use std::collections::HashMap;
 use classfile_parser::ClassFile;
 use classfile_parser::constant_info::ConstantInfo;
 use classfile_parser::method_info::MethodAccessFlags;
 use method::Method;
 
-pub struct Class {
+pub struct Class<'a> {
     class_file: ClassFile,
+    methods: HashMap<String, Method<'a>>,
 }
 
-impl Class {
+impl <'a> Class<'a> {
     pub fn new(class_file: ClassFile) -> Self {
-        Class { class_file }
+        Class { 
+            class_file: class_file,
+            methods: HashMap::with_capacity(class_file.methods_count as usize),
+        }
     }
 
     pub fn name(&self) -> String {
@@ -67,19 +72,33 @@ impl Class {
         }
     }
 
-    pub fn main(&self) -> Option<Method> {
-        let public_static = 
-            MethodAccessFlags::PUBLIC | 
-            MethodAccessFlags::STATIC;
+    pub fn method(&self, name: &str) -> Option<&Method> {
+        if let Some(m) = self.methods.get(name) {
+            return Some(m);
+        }
 
         for method in &self.class_file.methods {
-            let name = self.resolve_constant(method.name_index);
-            let flags = method.access_flags;
-            if name == "main" && (flags & public_static) == public_static {
-                return Some(Method::new(self, method));
+            if name == self.resolve_constant(method.name_index) {
+                let m = Method::new(self, method);
+                self.methods.insert(name.to_owned(), m);
+                return self.methods.get(name);
+            }
+        }
+    
+        None
+    }
+
+    pub fn method_with_flags(&self, name: &str, flags: MethodAccessFlags) -> Option<&Method> {
+        if let Some(m) = self.method(name) {
+            if (m.method_info.access_flags & flags) == flags {
+                return Some(m);
             }
         }
 
         None
+    }
+
+    pub fn main(&self) -> Option<&Method> {
+        self.method_with_flags("main", MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC)
     }
 }

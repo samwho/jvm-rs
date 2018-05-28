@@ -1,43 +1,23 @@
-use std::collections::HashMap;
-use classfile_parser::parse_class;
-use failure::{Error, err_msg};
-use class::Class;
-use method::Method;
+use failure::Error;
+use class_loader::ClassLoader;
+use dir_class_loader::DirClassLoader;
 
-pub struct Runtime<'a> {
-    classes: HashMap<String, Class<'a>>,
-    current_class: &'a Class<'a>,
-    current_method: &'a Method<'a>,
+pub struct Runtime {
+    class_loader: DirClassLoader,
 }
 
-impl <'a> Runtime<'a> {
-    pub fn new(path: &str) -> Result<Self, Error> {
-        let class_file = match parse_class(path) {
-            Ok(c) => c,
-            Err(e) => return Err(err_msg(e)),
-        };
-
-        let class = Class::new(class_file);
-        let class_name = class.name();
-
-        let main = match class.main() {
-            Some(main) => main,
-            None => return Err(err_msg("couldn't find main method")),
-        };
-
-        let mut classes: HashMap<String, Class> = HashMap::new();
-        classes.insert(class_name, class);
-
-        Ok(Runtime {
-            classes: classes,
-            current_class: classes.get(&class_name)
-                            .expect("should never happen"),
-            current_method: main,
+impl Runtime {
+    pub fn new(classpath: String) -> Result<Self, Error> {
+        Ok(Runtime { 
+            class_loader: DirClassLoader::new(classpath),
         })
     }
 
-    pub fn run(&self) {
-        let code_attribute = self.current_method.code_attribute();
+    pub fn run(&mut self, class_name: &str) -> Result<(), Error> {
+        let current_class = self.class_loader.load(class_name)?;
+        let current_method = current_class.main().unwrap();
+
+        let code_attribute = current_class.code_attribute(current_method);
         let code = &mut code_attribute.code.clone();
 
         // .remove(0) is O(n), .pop() is O(1).
@@ -52,7 +32,7 @@ impl <'a> Runtime<'a> {
                 0x00 => println!("nop"),
                 0xb2 => {
                     let idx = pop_u16(code);
-                    let resolved = self.current_class.resolve_constant(idx);
+                    let resolved = current_class.resolve_constant(idx);
                     println!("getstatic #{} // {}", idx, resolved);
                 },
                 0xbb => println!("new #{}", pop_u16(code)),
@@ -67,15 +47,8 @@ impl <'a> Runtime<'a> {
                 }
             }
         }
-    }
 
-    fn find_main(&self) -> Option<&Method> {
-        for (_, class) in &self.classes {
-            if let Some(main) = class.main() {
-                return Some(main);
-            }
-        }
-        None
+        Ok(())
     }
 }
 

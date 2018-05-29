@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::path::Path;
+use std::fs::File;
+use nom::IResult;
+use failure::{Error, err_msg};
+use std::io::Read;
 
 use class::Class;
-use classfile_parser::parse_class;
+use classfile_parser::class_parser;
 use classfile_parser::ClassFile;
 
 pub struct ClassLoader {
@@ -19,42 +23,46 @@ impl ClassLoader {
         }
     }
 
-    pub fn load(&mut self, class_name: &str) -> Option<&Class> {
+    pub fn load(&mut self, class_name: &str) -> Result<Option<&Class>, Error> {
         match self.classes.entry(class_name.to_owned()) {
-            Occupied(o) => Some(o.into_mut()),
-            Vacant(v) => match try_load(&self.paths, class_name) {
-                Some(c) => Some(v.insert(c)),
-                None => None,
+            Occupied(o) => Ok(Some(o.into_mut())),
+            Vacant(v) => match try_load(&self.paths, class_name)? {
+                Some(c) => Ok(Some(v.insert(c))),
+                None => Ok(None),
             }
         }
     }
 }
 
-fn try_load(paths: &Vec<String>, class_name: &str) -> Option<Class> {
+fn try_load(paths: &Vec<String>, class_name: &str) -> Result<Option<Class>, Error> {
     for path in paths {
-        if let Some(c) = try_load_from(path, class_name) {
-            return Some(Class::new(c));
+        if let Some(c) = try_load_from(path, class_name)? {
+            return Ok(Some(Class::new(c)));
         }
     }
 
-    None
+    Ok(None)
 }
 
-fn try_load_from(path: &str, class_name: &str) -> Option<ClassFile> {
-    if path.ends_with(".jar") {
-        return None;
-    } 
+fn try_load_from(classpath_entry: &str, class_name: &str) -> Result<Option<ClassFile>, Error> {
+    let path_to_class = path_to(classpath_entry, class_name);
+    let path = Path::new(&path_to_class);
 
-    match parse_class(&path_to(path, class_name)) {
-        Ok(class) => Some(class),
-        Err(_) => None,
+    if classpath_entry.ends_with(".jar") {
+        return Ok(None);
+    }
+
+    let mut class_bytes = Vec::new();
+    File::open(&path)?.read_to_end(&mut class_bytes)?;
+
+    match class_parser(&class_bytes) {
+        IResult::Done(_, c) => Ok(Some(c)),
+        _ => Err(err_msg("error while parsing .class file")),
     }
 }
 
 fn path_to(dir: &str, class_name: &str) -> String {
-    Path::new(dir)
-        .join(class_name.replace(".", "/"))
-        .to_str()
-        .unwrap()
-        .to_owned()
+    let mut path = class_name.replace(".", "/");
+    path.push_str(".class");
+    Path::new(dir).join(path).to_str().unwrap().to_owned()
 }

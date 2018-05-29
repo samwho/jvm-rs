@@ -13,9 +13,9 @@ impl Runtime {
     }
 
     pub fn run(&mut self, class_name: &str) -> Result<(), Error> {
-        let current_class = match self.class_loader.load(class_name) {
+        let current_class = match self.class_loader.load(class_name)? {
             Some(class) => class,
-            None => return Err(err_msg("could not load main class")),
+            None => return Err(err_msg("could not find main class")),
         };
 
         let current_method = current_class.main().unwrap();

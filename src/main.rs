@@ -1,5 +1,6 @@
 extern crate classfile_parser;
 extern crate failure;
+extern crate nom;
 extern crate zip;
 
 use std::env;

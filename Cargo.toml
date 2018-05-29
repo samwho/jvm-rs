@@ -5,6 +5,8 @@ authors = ["Sam Rose <samwho@lbak.co.uk>"]
 
 [dependencies]
 classfile-parser = "0.3.0"
+nom = "^3.2"
+
 failure = "0.1.1"
 failure_derive = "0.1.1"
 zip = "0.4"

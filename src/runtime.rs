@@ -34,7 +34,6 @@ impl Runtime {
         };
 
         let current_method = current_class.main().unwrap();
-
         let code_attribute = current_class.code_attribute(current_method);
         let code = &mut code_attribute.code.clone();
 
@@ -50,8 +49,7 @@ impl Runtime {
                 0x00 => println!("nop"),
                 0xb2 => {
                     let idx = pop_u16(code);
-                    let resolved = current_class.resolve_constant(idx);
-                    println!("getstatic #{} // {}", idx, resolved);
+                    println!("getstatic #{} // {}", idx, current_class.const_pool().resolve(idx));
                 },
                 0xbb => println!("new #{}", pop_u16(code)),
                 0x59 => println!("dup"),

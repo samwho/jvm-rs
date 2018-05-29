@@ -3,7 +3,7 @@ use classfile_parser::attribute_info::code_attribute_parser;
 use classfile_parser::attribute_info::CodeAttribute;
 use classfile_parser::method_info::{MethodAccessFlags, MethodInfo};
 
-use resolve_constant;
+use const_pool::ConstPool;
 
 pub struct Class {
     class_file: ClassFile,
@@ -18,7 +18,7 @@ impl Class {
 
     pub fn method(&self, name: &str) -> Option<&MethodInfo> {
         for method in &self.class_file.methods {
-            if self.resolve_constant(method.name_index) == name {
+            if self.const_pool().resolve(method.name_index) == name {
                 return Some(method);
             }
         }
@@ -36,8 +36,8 @@ impl Class {
         None
     }
 
-    pub fn resolve_constant(&self, idx: u16) -> String {
-        resolve_constant(&self.class_file.const_pool, idx)
+    pub fn const_pool(&self) -> ConstPool {
+        ConstPool::new(&self.class_file.const_pool)
     }
 
     pub fn main(&self) -> Option<&MethodInfo> {
@@ -48,7 +48,7 @@ impl Class {
 
     pub fn code_attribute(&self, method_info: &MethodInfo) -> CodeAttribute {
         for attribute in &method_info.attributes {
-            let name = self.resolve_constant(attribute.attribute_name_index);
+            let name = self.const_pool().resolve(attribute.attribute_name_index);
             if name == "Code" {
                 let code = code_attribute_parser(&attribute.info).unwrap();
                 return code.1;

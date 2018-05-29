@@ -54,13 +54,18 @@ fn try_load_from(classpath_entry: &str, class_name: &str) -> Result<Option<Class
     let path = Path::new(&path_to_class);
 
     let mut class_bytes = Vec::new();
+    let mut file = match File::open(&path) {
+        Ok(f) => f,
+        Err(_) => return Ok(None),
+    };
 
     if classpath_entry.ends_with(".jar") {
-        ZipArchive::new(File::open(&path)?)?
-            .by_name(&path_to_class)?
-            .read_to_end(&mut class_bytes)?;
+        match ZipArchive::new(file)?.by_name(&path_to_class) {
+            Ok(f) => f,
+            Err(_) => return Ok(None),
+        }.read_to_end(&mut class_bytes)?;
     } else {
-        File::open(&path)?.read_to_end(&mut class_bytes)?;
+        file.read_to_end(&mut class_bytes)?;
     }
 
     match class_parser(&class_bytes) {

@@ -17,18 +17,8 @@ impl Runtime {
         Runtime { class_loaders }
     }
 
-    fn load_class(&mut self, class_name: &str) -> Result<Option<&Class>, Error> {
-       for class_loader in &mut self.class_loaders {
-            if let Some(class) = class_loader.load(class_name)? {
-                return Ok(Some(class));
-            }
-       }
-
-       Ok(None)
-    }
-
     pub fn run(&mut self, class_name: &str) -> Result<(), Error> {
-        let current_class = match self.load_class(class_name)? {
+        let current_class = match load_class(&mut self.class_loaders, class_name)? {
             Some(class) => class,
             None => return Err(err_msg("could not find main class")),
         };
@@ -49,6 +39,8 @@ impl Runtime {
                 0x00 => println!("nop"),
                 0xb2 => {
                     let idx = pop_u16(code);
+                    let class_name = current_class.const_pool().class_name(idx)?;
+                    //let class = load_class(&mut self.class_loaders, &class_name)?;
                     println!("getstatic #{} // {}", idx, current_class.const_pool().resolve(idx));
                 },
                 0xbb => println!("new #{}", pop_u16(code)),
@@ -77,3 +69,14 @@ fn pop_u16(code: &mut Vec<u8>) -> u16 {
 fn pop_u8(code: &mut Vec<u8>) -> u8 {
     code.pop().expect("pop called on empty vec")
 }
+
+fn load_class<'a>(class_loaders: &'a mut Vec<ClassLoader>, class_name: &str) -> Result<Option<&'a Class>, Error> {
+   for class_loader in class_loaders {
+        if let Some(class) = class_loader.load(class_name)? {
+            return Ok(Some(class));
+        }
+   }
+
+   Ok(None)
+}
+

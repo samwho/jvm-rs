@@ -5,6 +5,7 @@ use std::fs::File;
 use nom::IResult;
 use failure::{Error, err_msg};
 use std::io::Read;
+use zip::ZipArchive;
 
 use class::Class;
 use classfile_parser::class_parser;
@@ -48,12 +49,15 @@ fn try_load_from(classpath_entry: &str, class_name: &str) -> Result<Option<Class
     let path_to_class = path_to(classpath_entry, class_name);
     let path = Path::new(&path_to_class);
 
-    if classpath_entry.ends_with(".jar") {
-        return Ok(None);
-    }
-
     let mut class_bytes = Vec::new();
-    File::open(&path)?.read_to_end(&mut class_bytes)?;
+
+    if classpath_entry.ends_with(".jar") {
+        ZipArchive::new(File::open(&path)?)?
+            .by_name(&path_to_class)?
+            .read_to_end(&mut class_bytes)?;
+    } else {
+        File::open(&path)?.read_to_end(&mut class_bytes)?;
+    }
 
     match class_parser(&class_bytes) {
         IResult::Done(_, c) => Ok(Some(c)),

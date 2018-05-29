@@ -1,5 +1,6 @@
 extern crate classfile_parser;
 extern crate failure;
+extern crate zip;
 
 use std::env;
 use failure::Error;
@@ -9,7 +10,6 @@ use runtime::Runtime;
 
 mod class;
 mod class_loader;
-mod dir_class_loader;
 
 use classfile_parser::constant_info::ConstantInfo;
 
@@ -18,7 +18,7 @@ fn main() -> Result<(), Error> {
     let classpath = &args[1];
     let main_class = &args[2];
 
-    let mut runtime = Runtime::new(classpath.clone()).unwrap();
+    let mut runtime = Runtime::new(classpath).unwrap();
     runtime.run(main_class)
 }
 

@@ -1,20 +1,23 @@
-use failure::Error;
 use class_loader::ClassLoader;
-use dir_class_loader::DirClassLoader;
+use failure::{Error, err_msg};
 
 pub struct Runtime {
-    class_loader: DirClassLoader,
+    class_loader: ClassLoader,
 }
 
 impl Runtime {
-    pub fn new(classpath: String) -> Result<Self, Error> {
+    pub fn new(classpath: &str) -> Result<Self, Error> {
         Ok(Runtime { 
-            class_loader: DirClassLoader::new(classpath),
+            class_loader: ClassLoader::new(classpath),
         })
     }
 
     pub fn run(&mut self, class_name: &str) -> Result<(), Error> {
-        let current_class = self.class_loader.load(class_name)?;
+        let current_class = match self.class_loader.load(class_name) {
+            Some(class) => class,
+            None => return Err(err_msg("could not load main class")),
+        };
+
         let current_method = current_class.main().unwrap();
 
         let code_attribute = current_class.code_attribute(current_method);

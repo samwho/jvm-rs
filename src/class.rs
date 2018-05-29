@@ -5,6 +5,7 @@ use classfile_parser::method_info::{MethodAccessFlags, MethodInfo};
 
 use const_pool::ConstPool;
 
+#[derive(Clone, Debug)]
 pub struct Class {
     class_file: ClassFile,
 }

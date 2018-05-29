@@ -4,9 +4,12 @@ version = "0.1.0"
 authors = ["Sam Rose <samwho@lbak.co.uk>"]
 
 [dependencies]
-classfile-parser = "0.3.0"
+classfile-parser = { path = "../classfile-parser" }
 nom = "^3.2"
 
 failure = "0.1.1"
 failure_derive = "0.1.1"
 zip = "0.4"
+
+log = "0.4"
+pretty_env_logger = "0.2"

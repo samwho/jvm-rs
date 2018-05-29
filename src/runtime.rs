@@ -17,8 +17,18 @@ impl Runtime {
         Runtime { class_loaders }
     }
 
+    fn load_class(&mut self, class_name: &str) -> Result<Option<Class>, Error> {
+       for class_loader in &mut self.class_loaders {
+            if let Some(class) = class_loader.load(class_name)? {
+                return Ok(Some(class));
+            }
+       }
+
+       Ok(None)
+    }
+
     pub fn run(&mut self, class_name: &str) -> Result<(), Error> {
-        let current_class = match load_class(&mut self.class_loaders, class_name)? {
+        let current_class = match self.load_class(class_name)? {
             Some(class) => class,
             None => return Err(err_msg("could not find main class")),
         };
@@ -26,9 +36,7 @@ impl Runtime {
         let current_method = current_class.main().unwrap();
         let code_attribute = current_class.code_attribute(current_method);
         let code = &mut code_attribute.code.clone();
-
-        // .remove(0) is O(n), .pop() is O(1).
-        code.reverse();
+        code.reverse(); // .remove(0) is O(n), .pop() is O(1).
         
         loop {
             if code.len() == 0 {
@@ -40,7 +48,8 @@ impl Runtime {
                 0xb2 => {
                     let idx = pop_u16(code);
                     let class_name = current_class.const_pool().class_name(idx)?;
-                    //let class = load_class(&mut self.class_loaders, &class_name)?;
+                    let class = self.load_class(&class_name)?;
+                    println!("{:?}", class);
                     println!("getstatic #{} // {}", idx, current_class.const_pool().resolve(idx));
                 },
                 0xbb => println!("new #{}", pop_u16(code)),
@@ -69,14 +78,3 @@ fn pop_u16(code: &mut Vec<u8>) -> u16 {
 fn pop_u8(code: &mut Vec<u8>) -> u8 {
     code.pop().expect("pop called on empty vec")
 }
-
-fn load_class<'a>(class_loaders: &'a mut Vec<ClassLoader>, class_name: &str) -> Result<Option<&'a Class>, Error> {
-   for class_loader in class_loaders {
-        if let Some(class) = class_loader.load(class_name)? {
-            return Ok(Some(class));
-        }
-   }
-
-   Ok(None)
-}
-

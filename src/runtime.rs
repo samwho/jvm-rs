@@ -1,9 +1,11 @@
 use class_loader::ClassLoader;
 use class::Class;
+use stack::Stack;
 use failure::{Error, err_msg};
 
 pub struct Runtime {
     class_loaders: Vec<ClassLoader>,
+    stack: Stack,
 }
 
 impl Runtime {
@@ -14,13 +16,16 @@ impl Runtime {
     pub fn new(mut class_loaders: Vec<ClassLoader>) -> Self {
         class_loaders.push(ClassLoader::bootstrap());
         class_loaders.push(ClassLoader::new("."));
-        Runtime { class_loaders }
+        Runtime { 
+            class_loaders: class_loaders,
+            stack: Stack::new(),
+        }
     }
 
     fn load_class(&mut self, class_name: &str) -> Result<Option<Class>, Error> {
        for class_loader in &mut self.class_loaders {
             if let Some(class) = class_loader.load(class_name)? {
-                return Ok(Some(class));
+                return Ok(Some(Class::new(class)));
             }
        }
 
@@ -49,7 +54,6 @@ impl Runtime {
                     let idx = pop_u16(code);
                     let class_name = current_class.const_pool().class_name(idx)?;
                     let class = self.load_class(&class_name)?;
-                    println!("{:?}", class);
                     println!("getstatic #{} // {}", idx, current_class.const_pool().resolve(idx));
                 },
                 0xbb => println!("new #{}", pop_u16(code)),

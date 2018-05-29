@@ -7,13 +7,11 @@ use failure::{Error, err_msg};
 use std::io::Read;
 use zip::ZipArchive;
 
-use class::Class;
 use classfile_parser::class_parser;
 use classfile_parser::ClassFile;
 
 pub struct ClassLoader {
     paths: Vec<String>,
-    classes: HashMap<String, ClassFile>,
 }
 
 impl ClassLoader {
@@ -24,29 +22,18 @@ impl ClassLoader {
     pub fn new(classpath: &str) -> Self {
         ClassLoader { 
             paths: classpath.split(":").map(|s| s.to_string()).collect(),
-            classes: HashMap::new(),
         }
     }
 
-    pub fn load(&mut self, class_name: &str) -> Result<Option<Class>, Error> {
-        match self.classes.entry(class_name.to_owned()) {
-            Occupied(o) => Ok(Some(Class::new(o.into_mut().to_owned()))),
-            Vacant(v) => match try_load(&self.paths, class_name)? {
-                Some(c) => Ok(Some(Class::new(v.insert(c).to_owned()))),
-                None => Ok(None),
+    pub fn load(&mut self, class_name: &str) -> Result<Option<ClassFile>, Error> {
+        for path in &self.paths {
+            if let Some(c) = try_load_from(path, class_name)? {
+                return Ok(Some(c));
             }
         }
-    }
-}
 
-fn try_load(paths: &Vec<String>, class_name: &str) -> Result<Option<ClassFile>, Error> {
-    for path in paths {
-        if let Some(c) = try_load_from(path, class_name)? {
-            return Ok(Some(c));
-        }
+        Ok(None)
     }
-
-    Ok(None)
 }
 
 fn try_load_from(classpath_entry: &str, class_name: &str) -> Result<Option<ClassFile>, Error> {

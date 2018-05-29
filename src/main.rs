@@ -15,6 +15,9 @@ use runtime::Runtime;
 mod class;
 mod class_loader;
 mod const_pool;
+mod stack;
+mod frame;
+mod variable;
 
 fn main() -> Result<(), Error> {
     pretty_env_logger::init();

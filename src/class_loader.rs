@@ -17,6 +17,10 @@ pub struct ClassLoader {
 }
 
 impl ClassLoader {
+    pub fn bootstrap() -> Self {
+        Self::new("/usr/lib/jvm/java-8-openjdk/jre/lib/resources.jar:/usr/lib/jvm/java-8-openjdk/jre/lib/rt.jar:/usr/lib/jvm/java-8-openjdk/jre/lib/sunrsasign.jar:/usr/lib/jvm/java-8-openjdk/jre/lib/jsse.jar:/usr/lib/jvm/java-8-openjdk/jre/lib/jce.jar:/usr/lib/jvm/java-8-openjdk/jre/lib/charsets.jar:/usr/lib/jvm/java-8-openjdk/jre/lib/jfr.jar:/usr/lib/jvm/java-8-openjdk/jre/classes")
+    }
+
     pub fn new(classpath: &str) -> Self {
         ClassLoader { 
             paths: classpath.split(":").map(|s| s.to_string()).collect(),

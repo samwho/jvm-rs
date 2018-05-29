@@ -1,19 +1,34 @@
 use class_loader::ClassLoader;
+use class::Class;
 use failure::{Error, err_msg};
 
 pub struct Runtime {
-    class_loader: ClassLoader,
+    class_loaders: Vec<ClassLoader>,
 }
 
 impl Runtime {
-    pub fn new(classpath: &str) -> Result<Self, Error> {
-        Ok(Runtime { 
-            class_loader: ClassLoader::new(classpath),
-        })
+    pub fn with_classpath(classpath: &str) -> Self {
+        Self::new(vec![ClassLoader::new(classpath)])        
+    }
+
+    pub fn new(mut class_loaders: Vec<ClassLoader>) -> Self {
+        class_loaders.push(ClassLoader::bootstrap());
+        class_loaders.push(ClassLoader::new("."));
+        Runtime { class_loaders }
+    }
+
+    fn load_class(&mut self, class_name: &str) -> Result<Option<&Class>, Error> {
+       for class_loader in &mut self.class_loaders {
+            if let Some(class) = class_loader.load(class_name)? {
+                return Ok(Some(class));
+            }
+       }
+
+       Ok(None)
     }
 
     pub fn run(&mut self, class_name: &str) -> Result<(), Error> {
-        let current_class = match self.class_loader.load(class_name)? {
+        let current_class = match self.load_class(class_name)? {
             Some(class) => class,
             None => return Err(err_msg("could not find main class")),
         };

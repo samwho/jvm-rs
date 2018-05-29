@@ -18,9 +18,7 @@ fn main() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
     let classpath = &args[1];
     let main_class = &args[2];
-
-    let mut runtime = Runtime::new(classpath).unwrap();
-    runtime.run(main_class)
+    Runtime::with_classpath(classpath).run(main_class)
 }
 
 pub fn resolve_constant(const_pool: &Vec<ConstantInfo>, idx: u16) -> String {
